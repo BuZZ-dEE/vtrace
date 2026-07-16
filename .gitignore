@@ -1,0 +1,10 @@
+node_modules
+dist
+.generated
+rust/**/target
+.DS_Store
+
+# VSCode history plugin
+.history
+
+.eslintcache

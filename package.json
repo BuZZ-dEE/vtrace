@@ -1,0 +1,95 @@
+{
+  "name": "@buzz-dee/vtrace",
+  "version": "0.0.0",
+  "private": false,
+  "type": "module",
+  "description": "TypeScript image tracing module",
+  "author": "Sebastian Schlatow <buzz-dee@riseup.net>",
+  "packageManager": "pnpm@11.11.0",
+  "license": "MIT",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BuZZ-dEE/vtrace.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsc -w",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build:wasm": "node scripts/build-vtracer-wasm.mjs",
+    "build": "pnpm clean && rolldown --config && tsc --emitDeclarationOnly",
+    "test": "jest",
+    "lint": "eslint --ext .js,.ts src",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.1.1",
+    "@typescript-eslint/eslint-plugin": "^8.63.0",
+    "@typescript-eslint/parser": "^8.63.0",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "5.5.6",
+    "husky": "9.1.7",
+    "jest": "^30.4.2",
+    "lint-staged": "17.0.8",
+    "prettier": "3.9.5",
+    "rolldown": "^1.0.0",
+    "ts-jest": "^29.4.11",
+    "typescript": "^6.0.3"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
+  "keywords": [
+    "vtrace",
+    "typescript",
+    "image to svg"
+  ],
+  "productName": "vtrace",
+  "jest": {
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+    "moduleNameMapper": {
+      "@/(.*)$": "<rootDir>/$1"
+    },
+    "testEnvironment": "node",
+    "transformIgnorePatterns": [
+      "<rootDir>/node_modules/"
+    ],
+    "preset": "ts-jest",
+    "transform": {
+      "^.+\\.ts?$": "ts-jest"
+    },
+    "testPathIgnorePatterns": [
+      "<rootDir>/dist/"
+    ],
+    "maxConcurrency": 10,
+    "maxWorkers": 1
+  },
+  "lint-staged": {
+    "*.{md,ts}": "prettier --write",
+    "*.{js,ts}": [
+      "eslint --cache --fix"
+    ]
+  }
+}
