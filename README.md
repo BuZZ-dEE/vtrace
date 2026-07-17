@@ -58,7 +58,9 @@ const options: VTraceOptions = {
   threshold: VTrace.THRESHOLD_AUTO,
   turdSize: 2,
   optCurve: true,
+  colorMode: "binary",
   mode: "spline",
+  hierarchical: "cutout",
 };
 
 const vtrace = new VTrace(imageData, options);
@@ -140,10 +142,14 @@ interface SimplifyResult {
 interface VTraceOptions {
   /** Suppress speckles up to this size. Defaults to `2`. */
   turdSize?: number;
+  /** Alias for `turdSize`, matching the VTracer option name. */
+  filterSpeckle?: number;
   /** Whether spline curve fitting is enabled. Defaults to `true`. */
   optCurve?: boolean;
   /** Threshold below which luminance is considered black, from `0` to `255`, or `VTrace.THRESHOLD_AUTO`. */
   threshold?: number;
+  /** VTracer color mode. Defaults to `binary`, which thresholds the image before tracing. */
+  colorMode?: "binary" | "color";
   /** Whether darker pixels are traced as foreground. Defaults to `true`. */
   blackOnWhite?: boolean;
   /** Foreground color. Defaults to `VTrace.COLOR_AUTO`; ignored when exporting as `<symbol>`. */
@@ -156,6 +162,8 @@ interface VTraceOptions {
   height?: number;
   /** VTracer curve fitting mode. Defaults to `spline`; `pixel` maps to VTracer's unsimplified mode. */
   mode?: "pixel" | "polygon" | "spline";
+  /** VTracer hierarchical mode. Defaults to `stacked`; use `cutout` to subtract upper layers from lower layers. */
+  hierarchical?: "stacked" | "cutout";
   /** VTracer minimum momentary angle, in degrees, to be considered a corner. Defaults to `60`. */
   cornerThreshold?: number;
   /** VTracer segment length threshold. Defaults to `4`. */
@@ -166,6 +174,10 @@ interface VTraceOptions {
   maxIterations?: number;
   /** VTracer minimum angle displacement, in degrees, to splice a spline. Defaults to `45`. */
   spliceThreshold?: number;
+  /** VTracer RGB channel precision. Defaults to `6`; mainly relevant with `colorMode: 'color'`. */
+  colorPrecision?: number;
+  /** VTracer RGB layer difference threshold. Defaults to `16`; mainly relevant with `colorMode: 'color'`. */
+  layerDifference?: number;
   /** VTracer decimal places for generated path data. Defaults to `8`. */
   pathPrecision?: number;
 }
@@ -174,23 +186,31 @@ interface VTraceOptions {
 Defaults:
 
 - `turdSize`: `2`
+- `filterSpeckle`: uses `turdSize` when omitted
 - `optCurve`: `true`
 - `threshold`: `VTrace.THRESHOLD_AUTO`
+- `colorMode`: `'binary'`
 - `blackOnWhite`: `true`
 - `color`: `VTrace.COLOR_AUTO`
 - `background`: `VTrace.COLOR_TRANSPARENT`
 - `width`: source image width
 - `height`: source image height
 - `mode`: `'spline'`
+- `hierarchical`: `'stacked'`
 - `cornerThreshold`: `60`
 - `lengthThreshold`: `4`
 - `maxIterations`: `10`
 - `spliceThreshold`: `45`
+- `colorPrecision`: `6`
+- `layerDifference`: `16`
 - `pathPrecision`: `8`
 
 Compatibility notes:
 
 - `optCurve: false` maps tracing to polygon mode instead of spline mode.
+- `filterSpeckle` is an alias for `turdSize`; when both are set, `filterSpeckle` is passed to VTracer.
+- `threshold` and `blackOnWhite` only affect tracing when `colorMode` is `'binary'`.
+- `colorMode: 'color'` traces the source `ImageData` as RGBA bytes. VTracer clusters colors in RGB channel space; it does not use a perceptual color space such as Lab.
 
 ## WASM Bundle Strategy
 

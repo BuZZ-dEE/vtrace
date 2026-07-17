@@ -103,6 +103,9 @@ describe("VTrace", () => {
     expect(() => new VTrace(image, { mode: "curve" as never })).toThrow(
       "Bad mode value",
     );
+    expect(
+      () => new VTrace(image, { hierarchical: "layers" as never }),
+    ).toThrow("Bad hierarchical value");
   });
 
   it("supports VTracer curve fitting modes", () => {
@@ -122,5 +125,26 @@ describe("VTrace", () => {
         turdSize: 0,
       }).getSVGPath().length,
     ).toBeGreaterThan(0);
+  });
+
+  it("supports VTracer cutout hierarchical mode", () => {
+    const vtrace = new VTrace(createImageData(3, 3, [0, 0, 0, 255]), {
+      hierarchical: "cutout",
+      threshold: 128,
+      turdSize: 0,
+    });
+
+    expect(vtrace.getSVGPath().length).toBeGreaterThan(0);
+  });
+
+  it("supports additional VTracer parameters", () => {
+    const vtrace = new VTrace(createImageData(3, 3, [0, 0, 0, 255]), {
+      colorMode: "color",
+      filterSpeckle: 0,
+      colorPrecision: 4,
+      layerDifference: 8,
+    });
+
+    expect(vtrace.getSVGPath().length).toBeGreaterThan(0);
   });
 });

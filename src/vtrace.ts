@@ -7,14 +7,20 @@ import * as utils from "./utils";
 import { to_svg as traceToSvg } from "./vtracer-embedded";
 
 type VTracerMode = "pixel" | "polygon" | "spline";
+type VTracerColorMode = "binary" | "color";
+type VTracerHierarchical = "stacked" | "cutout";
 
 export interface VTraceOptions {
   /** Suppress speckles up to this size. Defaults to `2`. */
   turdSize?: number;
+  /** Alias for `turdSize`, matching the VTracer option name. */
+  filterSpeckle?: number;
   /** Whether spline curve fitting is enabled. Defaults to `true`. */
   optCurve?: boolean;
   /** Threshold below which luminance is considered black, from `0` to `255`, or `VTrace.THRESHOLD_AUTO`. */
   threshold?: number;
+  /** VTracer color mode. Defaults to `binary`, which thresholds the image before tracing. Use `color` to trace color layers directly. */
+  colorMode?: VTracerColorMode;
   /** Whether darker pixels are traced as foreground. Defaults to `true`. */
   blackOnWhite?: boolean;
   /** Foreground color. Defaults to `VTrace.COLOR_AUTO`; ignored when exporting as `<symbol>`. */
@@ -27,6 +33,8 @@ export interface VTraceOptions {
   height?: number;
   /** VTracer curve fitting mode. Defaults to `spline`; `pixel` maps to VTracer's unsimplified mode. */
   mode?: VTracerMode;
+  /** VTracer hierarchical mode. Defaults to `stacked`. `cutout` subtracts upper layers from lower layers and is mainly relevant with `colorMode: 'color'`. */
+  hierarchical?: VTracerHierarchical;
   /** VTracer minimum momentary angle, in degrees, to be considered a corner. Defaults to `60`. */
   cornerThreshold?: number;
   /** VTracer segment length threshold. Defaults to `4`. */
@@ -37,31 +45,44 @@ export interface VTraceOptions {
   maxIterations?: number;
   /** VTracer minimum angle displacement, in degrees, to splice a spline. Defaults to `45`. */
   spliceThreshold?: number;
+  /** VTracer RGB channel precision. Defaults to `6`; mainly relevant with `colorMode: 'color'`. */
+  colorPrecision?: number;
+  /** VTracer RGB layer difference threshold. Defaults to `16`; mainly relevant with `colorMode: 'color'`. */
+  layerDifference?: number;
   /** VTracer decimal places for generated path data. Defaults to `8`. */
   pathPrecision?: number;
 }
 
 interface _VTraceOptions {
   turdSize: number;
+  filterSpeckle?: number;
   optCurve: boolean;
   threshold: number;
+  colorMode: VTracerColorMode;
   blackOnWhite: boolean;
   color: string;
   background: string;
   width: number;
   height: number;
   mode: VTracerMode;
+  hierarchical: VTracerHierarchical;
   cornerThreshold: number;
   lengthThreshold: number;
   segmentLength?: number;
   maxIterations: number;
   spliceThreshold: number;
+  colorPrecision: number;
+  layerDifference: number;
   pathPrecision: number;
 }
 
 type VTraceParameterValue = _VTraceOptions[keyof _VTraceOptions] | undefined;
 
 const VTRACER_MODE_VALUES: Array<VTracerMode> = ["pixel", "polygon", "spline"];
+const VTRACER_HIERARCHICAL_VALUES: Array<VTracerHierarchical> = [
+  "stacked",
+  "cutout",
+];
 
 function formatNumber(value: number, precision = 8): string {
   if (!Number.isFinite(value)) {
@@ -220,16 +241,20 @@ export class VTrace {
       turdSize: 2,
       optCurve: true,
       threshold: VTrace.THRESHOLD_AUTO,
+      colorMode: "binary",
       blackOnWhite: true,
       color: VTrace.COLOR_AUTO,
       background: VTrace.COLOR_TRANSPARENT,
       width: 0,
       height: 0,
       mode: "spline",
+      hierarchical: "stacked",
       cornerThreshold: 60,
       lengthThreshold: 4,
       maxIterations: 10,
       spliceThreshold: 45,
+      colorPrecision: 6,
+      layerDifference: 16,
       pathPrecision: 8,
     };
 
@@ -352,24 +377,28 @@ export class VTrace {
   }
 
   private _trace(): void {
-    const imageData = this._createBinaryImageData();
+    const binary = this._params.colorMode === "binary";
+    const imageData = binary ? this._createBinaryImageData() : this._imageData;
 
     this._pathData = traceToSvg(
       new Uint8Array(imageData.data),
       imageData.width,
       imageData.height,
       {
-        binary: true,
+        binary,
         mode: this._getVTracerMode(),
-        hierarchical: "stacked",
+        hierarchical: this._params.hierarchical,
         cornerThreshold: this._params.cornerThreshold,
         lengthThreshold:
           this._params.segmentLength ?? this._params.lengthThreshold,
         maxIterations: this._params.maxIterations,
         spliceThreshold: this._params.spliceThreshold,
-        filterSpeckle: Math.max(0, Math.floor(this._params.turdSize)),
-        colorPrecision: 6,
-        layerDifference: 16,
+        filterSpeckle: Math.max(
+          0,
+          Math.floor(this._params.filterSpeckle ?? this._params.turdSize),
+        ),
+        colorPrecision: this._params.colorPrecision,
+        layerDifference: this._params.layerDifference,
         pathPrecision: this._params.pathPrecision,
       },
     );
@@ -443,6 +472,15 @@ export class VTrace {
     ) {
       throw new Error(
         "Bad mode value. Allowed values are: 'pixel', 'polygon', 'spline'",
+      );
+    }
+
+    if (
+      params?.hierarchical != null &&
+      VTRACER_HIERARCHICAL_VALUES.indexOf(params.hierarchical) === -1
+    ) {
+      throw new Error(
+        "Bad hierarchical value. Allowed values are: 'stacked', 'cutout'",
       );
     }
   }
