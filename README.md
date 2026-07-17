@@ -12,6 +12,8 @@ A TypeScript image tracing library that converts `ImageData` to SVG using a VTra
 
 The tracing backend uses [VTracer](https://github.com/visioncortex/vtracer). The WASM runtime is embedded in the distributed JavaScript bundle, so browser and Angular consumers do not need to copy or serve a separate `.wasm` asset.
 
+This package is a VTracer-backed alternative to [`potrace-ts`](https://github.com/BuZZ-dEE/potrace-ts) for projects that need `ImageData`-to-SVG tracing with embedded WASM and no separate runtime asset setup.
+
 ## Features
 
 - Converts RGBA `ImageData` into SVG markup or SVG path data.
