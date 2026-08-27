@@ -91,6 +91,42 @@ describe("VTrace", () => {
     expect(simplified.stats.subPaths).toBeGreaterThanOrEqual(0);
   });
 
+  it("can remove inner sub-paths before simplifying SVG path data", () => {
+    const vtrace = new VTrace(createImageData(1, 1, [255, 255, 255, 255]));
+    const pathData = "M 0 0 L 10 0 L 10 10 L 0 10 Z M 2 2 L 4 2 L 4 4 L 2 4 Z";
+
+    (
+      vtrace as unknown as { _pathData: string; _processed: boolean }
+    )._pathData = `<path d="${pathData}"/>`;
+    (vtrace as unknown as { _processed: boolean })._processed = true;
+
+    const simplified = vtrace.getSimplifiedSVGPath(undefined, undefined, {
+      removeInnerSubPaths: true,
+      simplifyTolerance: 0.1,
+    });
+
+    expect(simplified.originalPath).toBe("M 0 0 L 10 0 L 10 10 L 0 10 Z");
+    expect(simplified.d).toBe("M 0 0 L 10 0 L 10 10 L 0 10 Z");
+    expect(simplified.stats.subPaths).toBe(1);
+  });
+
+  it("keeps inner sub-paths when simplification cleanup is disabled", () => {
+    const vtrace = new VTrace(createImageData(1, 1, [255, 255, 255, 255]));
+    const pathData = "M 0 0 L 10 0 L 10 10 L 0 10 Z M 2 2 L 4 2 L 4 4 L 2 4 Z";
+
+    (
+      vtrace as unknown as { _pathData: string; _processed: boolean }
+    )._pathData = `<path d="${pathData}"/>`;
+    (vtrace as unknown as { _processed: boolean })._processed = true;
+
+    const simplified = vtrace.getSimplifiedSVGPath(undefined, undefined, {
+      simplifyTolerance: 0.1,
+    });
+
+    expect(simplified.originalPath).toBe(pathData);
+    expect(simplified.stats.subPaths).toBe(2);
+  });
+
   it("validates supported option values", () => {
     const image = createImageData(1, 1, [255, 255, 255, 255]);
 

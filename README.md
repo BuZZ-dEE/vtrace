@@ -1,6 +1,6 @@
 # @buzz-dee/vtrace
 
-A TypeScript image tracing library that converts `ImageData` to SVG using a VTracer-backed WebAssembly engine, with configurable tracing options and optional SVG path simplification.
+A TypeScript image tracing library that converts `ImageData` to SVG using a VTracer-backed WebAssembly engine, with configurable tracing options, optional SVG path simplification, and optional inner sub-path removal.
 
 [![CI](https://github.com/BuZZ-dEE/vtrace/actions/workflows/ci.yml/badge.svg)](https://github.com/BuZZ-dEE/vtrace/actions/workflows/ci.yml)
 [![tested with jest](https://img.shields.io/badge/tested_with-jest-99424f.svg)](https://jestjs.io/)
@@ -22,6 +22,7 @@ This package is a VTracer-backed alternative to [`potrace-ts`](https://github.co
 - Works in browser applications without additional WASM asset or MIME-type configuration.
 - Supports output scaling, translation, foreground/background colors, thresholding, and speckle filtering.
 - Includes optional SVG path simplification utilities.
+- Can remove sub-paths that are fully contained inside another sub-path.
 
 ## Runtime Notes
 
@@ -73,8 +74,12 @@ const defaultPathData = vtrace.getSVGPath();
 const simplified = vtrace.getSimplifiedSVGPath(undefined, undefined, {
   flattenTolerance: 0.5,
   simplifyTolerance: 0.1,
+  removeInnerSubPaths: true,
 });
 const simplifiedPath = SvgPathSimplifier.simplifyPath("M 0 0 L 10 0 L 20 0");
+const cleanedPath = SvgPathSimplifier.removeInnerSubPaths(
+  "M 0 0 L 10 0 L 10 10 L 0 10 Z M 2 2 L 4 2 L 4 4 L 2 4 Z",
+);
 ```
 
 ## API
@@ -90,12 +95,14 @@ Creates a tracer instance from `ImageData`.
 
 - `getSVG(scale?)`: returns a complete SVG document string. If `scale` is omitted, it uses configured `width` and `height` scaling, or `{ x: 1, y: 1 }`.
 - `getSVGPath(scale?, trans?)`: returns SVG path data only. If `scale` is omitted, it uses configured `width` and `height` scaling, or `{ x: 1, y: 1 }`. If `trans` is omitted, it defaults to `{ x: 0, y: 0 }`.
-- `getSimplifiedSVGPath(scale?, trans?, options?)`: returns simplified SVG path data and simplification statistics. `scale` and `trans` use the same defaults as `getSVGPath`.
+- `getSimplifiedSVGPath(scale?, trans?, options?)`: returns simplified SVG path data and simplification statistics. `scale` and `trans` use the same defaults as `getSVGPath`. Pass `removeInnerSubPaths: true` to remove fully contained sub-paths before simplification.
 - `getPathTag(fillColor?, scale?, trans?)`: returns a `<path>` tag.
 - `getSymbol(id)`: returns an SVG `<symbol>` tag.
 - `setParameters(options)`: updates tracing/output parameters.
 
 `SvgPathSimplifier.simplifyPath(d, options?)` can also simplify arbitrary SVG path data directly.
+
+`SvgPathSimplifier.removeInnerSubPaths(d)` can remove sub-paths that lie completely inside another sub-path while preserving surviving path data verbatim. Sub-paths that overlap or touch are kept.
 
 Scale and translation values use this shape:
 
@@ -120,6 +127,11 @@ interface SimplifyOptions {
   flattenTolerance?: number;
   /** Ramer-Douglas-Peucker epsilon used to simplify flattened points. */
   simplifyTolerance?: number;
+}
+
+interface SvgPathSimplifyOptions extends SimplifyOptions {
+  /** Remove sub-paths that are fully contained in another sub-path before simplifying. */
+  removeInnerSubPaths?: boolean;
 }
 ```
 

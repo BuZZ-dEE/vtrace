@@ -3,6 +3,7 @@ import {
   SimplifyResult,
   SvgPathSimplifier,
 } from "./svg-path-simplifier";
+import { removeInnerSubPaths } from "./svg-sub-path-remover";
 import * as utils from "./utils";
 import { to_svg as traceToSvg } from "./vtracer-embedded";
 
@@ -51,6 +52,11 @@ export interface VTraceOptions {
   layerDifference?: number;
   /** VTracer decimal places for generated path data. Defaults to `8`. */
   pathPrecision?: number;
+}
+
+export interface SvgPathSimplifyOptions extends SimplifyOptions {
+  /** Remove sub-paths that are fully contained in another sub-path before simplifying. Defaults to `false`. */
+  removeInnerSubPaths?: boolean;
 }
 
 interface _VTraceOptions {
@@ -639,16 +645,18 @@ export class VTrace {
    *
    * @param {{x: number, y: number}} [scale] - Optional scale applied to path coordinates. Defaults to configured output scaling or `{x: 1, y: 1}`.
    * @param {{x: number, y: number}} [trans={x: 0, y: 0}] - Translation applied to path coordinates.
-   * @param {SimplifyOptions} [options={}] - Optional simplification settings.
+   * @param {SvgPathSimplifyOptions} [options={}] - Optional simplification and path cleanup settings.
    * @returns {SimplifyResult} Simplified path data and statistics.
    */
   getSimplifiedSVGPath(
     scale?: { x: number; y: number },
     trans: { x: number; y: number } = { x: 0, y: 0 },
-    options: SimplifyOptions = {},
+    options: SvgPathSimplifyOptions = {},
   ): SimplifyResult {
+    const pathData = this.getSVGPath(scale, trans);
+
     return SvgPathSimplifier.simplifyPath(
-      this.getSVGPath(scale, trans),
+      options.removeInnerSubPaths ? removeInnerSubPaths(pathData) : pathData,
       options,
     );
   }

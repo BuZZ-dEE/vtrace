@@ -1,3 +1,5 @@
+import { removeInnerSubPaths } from "./svg-sub-path-remover";
+
 interface Point {
   x: number;
   y: number;
@@ -53,6 +55,19 @@ type PathSegment =
 
 export class SvgPathSimplifier {
   /* ===================== PUBLIC API ===================== */
+
+  /**
+   * Removes sub-paths that lie completely inside another sub-path.
+   *
+   * Surviving path data is returned verbatim. Sub-paths that overlap or touch
+   * another sub-path are kept.
+   *
+   * @param {string} d - SVG path data.
+   * @returns {string} Path data with fully contained sub-paths removed.
+   */
+  static removeInnerSubPaths(d: string): string {
+    return removeInnerSubPaths(d);
+  }
 
   /**
    * Simplifies SVG path data by flattening curves and applying RDP simplification.
