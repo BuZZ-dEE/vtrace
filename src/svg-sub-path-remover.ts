@@ -1,4 +1,4 @@
-type Point = Readonly<{ x: number; y: number }>;
+type Point = Readonly<{x: number; y: number}>;
 
 interface SubPath {
   readonly start: number;
@@ -43,8 +43,8 @@ export function removeInnerSubPaths(d: string): string {
 
   return subPaths
     .filter((_, index) => !toRemove.has(index))
-    .map((subPath) => d.slice(subPath.start, subPath.end))
-    .join(" ");
+    .map(subPath => d.slice(subPath.start, subPath.end))
+    .join(' ');
 }
 
 function isSubPathWithin(inner: SubPath, outer: SubPath): boolean {
@@ -52,7 +52,7 @@ function isSubPathWithin(inner: SubPath, outer: SubPath): boolean {
     return false;
   }
   return inner.points.every(
-    (point) => pointStatus(point, outer.points) === "inside",
+    point => pointStatus(point, outer.points) === 'inside',
   );
 }
 
@@ -71,7 +71,7 @@ function parseSubPaths(d: string): SubPath[] {
 
   const closeCurrent = (end: number): void => {
     if (points.length > 0) {
-      subPaths.push({ start: subPathStart, end, points });
+      subPaths.push({start: subPathStart, end, points});
     }
   };
 
@@ -82,10 +82,10 @@ function parseSubPaths(d: string): SubPath[] {
     }
     const isRelative = command === command.toLowerCase();
     const type = command.toUpperCase();
-    const args = (match[2] ?? "").match(NUMBER_REGEX)?.map(Number) ?? [];
+    const args = (match[2] ?? '').match(NUMBER_REGEX)?.map(Number) ?? [];
     const index = match.index ?? 0;
 
-    if (type === "M") {
+    if (type === 'M') {
       closeCurrent(index);
       subPathStart = index;
       points = [];
@@ -93,8 +93,8 @@ function parseSubPaths(d: string): SubPath[] {
 
     let i = 0;
     switch (type) {
-      case "M":
-      case "L": {
+      case 'M':
+      case 'L': {
         while (i + 1 < args.length) {
           const p = absPoint(args[i], args[i + 1], isRelative, x, y);
           if (i === 0) {
@@ -109,9 +109,9 @@ function parseSubPaths(d: string): SubPath[] {
         }
         break;
       }
-      case "H": {
+      case 'H': {
         while (i < args.length) {
-          const p = { x: toAbs(args[i], isRelative, x), y };
+          const p = {x: toAbs(args[i], isRelative, x), y};
           points.push(p);
           x = p.x;
           prevControl = null;
@@ -119,9 +119,9 @@ function parseSubPaths(d: string): SubPath[] {
         }
         break;
       }
-      case "V": {
+      case 'V': {
         while (i < args.length) {
-          const p = { x, y: toAbs(args[i], isRelative, y) };
+          const p = {x, y: toAbs(args[i], isRelative, y)};
           points.push(p);
           y = p.y;
           prevControl = null;
@@ -129,12 +129,12 @@ function parseSubPaths(d: string): SubPath[] {
         }
         break;
       }
-      case "C": {
+      case 'C': {
         while (i + 5 < args.length) {
           const c1 = absPoint(args[i], args[i + 1], isRelative, x, y);
           const c2 = absPoint(args[i + 2], args[i + 3], isRelative, x, y);
           const p = absPoint(args[i + 4], args[i + 5], isRelative, x, y);
-          appendCubic(points, { x, y }, c1, c2, p);
+          appendCubic(points, {x, y}, c1, c2, p);
           x = p.x;
           y = p.y;
           prevControl = c2;
@@ -142,13 +142,13 @@ function parseSubPaths(d: string): SubPath[] {
         }
         break;
       }
-      case "S": {
+      case 'S': {
         while (i + 3 < args.length) {
           const c1: Point =
-            prevControl === null ? { x, y } : reflect({ x, y }, prevControl);
+            prevControl === null ? {x, y} : reflect({x, y}, prevControl);
           const c2 = absPoint(args[i], args[i + 1], isRelative, x, y);
           const p = absPoint(args[i + 2], args[i + 3], isRelative, x, y);
-          appendCubic(points, { x, y }, c1, c2, p);
+          appendCubic(points, {x, y}, c1, c2, p);
           x = p.x;
           y = p.y;
           prevControl = c2;
@@ -156,11 +156,11 @@ function parseSubPaths(d: string): SubPath[] {
         }
         break;
       }
-      case "Q": {
+      case 'Q': {
         while (i + 3 < args.length) {
           const c1 = absPoint(args[i], args[i + 1], isRelative, x, y);
           const p = absPoint(args[i + 2], args[i + 3], isRelative, x, y);
-          appendQuadratic(points, { x, y }, c1, p);
+          appendQuadratic(points, {x, y}, c1, p);
           x = p.x;
           y = p.y;
           prevControl = c1;
@@ -168,12 +168,12 @@ function parseSubPaths(d: string): SubPath[] {
         }
         break;
       }
-      case "T": {
+      case 'T': {
         while (i + 1 < args.length) {
           const c1: Point =
-            prevControl === null ? { x, y } : reflect({ x, y }, prevControl);
+            prevControl === null ? {x, y} : reflect({x, y}, prevControl);
           const p = absPoint(args[i], args[i + 1], isRelative, x, y);
-          appendQuadratic(points, { x, y }, c1, p);
+          appendQuadratic(points, {x, y}, c1, p);
           x = p.x;
           y = p.y;
           prevControl = c1;
@@ -181,7 +181,7 @@ function parseSubPaths(d: string): SubPath[] {
         }
         break;
       }
-      case "Z": {
+      case 'Z': {
         x = startX;
         y = startY;
         prevControl = null;
@@ -237,7 +237,7 @@ function flattenCubic(
   p3: Point,
   depth: number,
 ): void {
-  const mid = { x: (p0.x + p3.x) / 2, y: (p0.y + p3.y) / 2 };
+  const mid = {x: (p0.x + p3.x) / 2, y: (p0.y + p3.y) / 2};
   const flatness = Math.max(distance(c1, mid), distance(c2, mid));
   if (flatness <= CURVE_TOLERANCE || depth >= 12) {
     into.push(p3);
@@ -267,7 +267,7 @@ function appendQuadratic(into: Point[], p0: Point, q1: Point, p1: Point): void {
 
 // --- point in polygon ----------------------------------------------------------
 
-type PointStatus = "inside" | "outside" | "on";
+type PointStatus = 'inside' | 'outside' | 'on';
 
 function pointStatus(p: Point, polygon: readonly Point[]): PointStatus {
   const n = polygon.length;
@@ -276,7 +276,7 @@ function pointStatus(p: Point, polygon: readonly Point[]): PointStatus {
     const a = polygon[i] as Point;
     const b = polygon[j] as Point;
     if (distanceToSegment(p, a, b) <= BOUNDARY_EPSILON) {
-      return "on";
+      return 'on';
     }
     if (a.y > p.y !== b.y > p.y) {
       const xIntersect = a.x + ((p.y - a.y) / (b.y - a.y)) * (b.x - a.x);
@@ -285,7 +285,7 @@ function pointStatus(p: Point, polygon: readonly Point[]): PointStatus {
       }
     }
   }
-  return inside ? "inside" : "outside";
+  return inside ? 'inside' : 'outside';
 }
 
 function distanceToSegment(p: Point, a: Point, b: Point): number {
@@ -299,17 +299,17 @@ function distanceToSegment(p: Point, a: Point, b: Point): number {
     1,
     Math.max(0, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared),
   );
-  return distance(p, { x: a.x + t * dx, y: a.y + t * dy });
+  return distance(p, {x: a.x + t * dx, y: a.y + t * dy});
 }
 
 // --- helpers -------------------------------------------------------------------
 
 function lerp(a: Point, b: Point): Point {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  return {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
 }
 
 function reflect(base: Point, prev: Point): Point {
-  return { x: 2 * base.x - prev.x, y: 2 * base.y - prev.y };
+  return {x: 2 * base.x - prev.x, y: 2 * base.y - prev.y};
 }
 
 function distance(a: Point, b: Point): number {

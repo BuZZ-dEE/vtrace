@@ -1,4 +1,4 @@
-const attrRegexps: { [key: string]: RegExp } = {};
+const attrRegexps: {[key: string]: RegExp} = {};
 
 export function getAttrRegexp(attrName: string): RegExp {
   if (attrRegexps[attrName]) {
@@ -6,8 +6,8 @@ export function getAttrRegexp(attrName: string): RegExp {
   }
 
   attrRegexps[attrName] = new RegExp(
-    " " + attrName + '="((?:\\\\(?=")"|[^"])+)"',
-    "i",
+    ' ' + attrName + '="((?:\\\\(?=")"|[^"])+)"',
+    'i',
   );
   return attrRegexps[attrName];
 }

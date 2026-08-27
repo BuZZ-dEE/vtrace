@@ -1,4 +1,4 @@
-import { removeInnerSubPaths } from "./svg-sub-path-remover";
+import {removeInnerSubPaths} from './svg-sub-path-remover';
 
 interface Point {
   x: number;
@@ -44,11 +44,11 @@ export interface SimplifyResult {
   stats: PathStatistics;
 }
 
-type MoveSegment = { type: "M"; p: Point };
-type LineSegment = { type: "L"; p0: Point; p1: Point };
-type CubicSegment = { type: "C"; p0: Point; c1: Point; c2: Point; p1: Point };
-type QuadraticSegment = { type: "Q"; p0: Point; c: Point; p1: Point };
-type CloseSegment = { type: "Z"; p0: Point; p1: Point };
+type MoveSegment = {type: 'M'; p: Point};
+type LineSegment = {type: 'L'; p0: Point; p1: Point};
+type CubicSegment = {type: 'C'; p0: Point; c1: Point; c2: Point; p1: Point};
+type QuadraticSegment = {type: 'Q'; p0: Point; c: Point; p1: Point};
+type CloseSegment = {type: 'Z'; p0: Point; p1: Point};
 
 type PathSegment =
   MoveSegment | LineSegment | CubicSegment | QuadraticSegment | CloseSegment;
@@ -90,7 +90,7 @@ export class SvgPathSimplifier {
     const pointsBefore = originalPaths.reduce((sum, p) => sum + p.length, 0);
 
     // ✂️ simplify
-    const simplifiedPaths = originalPaths.map((p) =>
+    const simplifiedPaths = originalPaths.map(p =>
       this.simplifySubPath(p, simplifyTol),
     );
 
@@ -101,8 +101,8 @@ export class SvgPathSimplifier {
 
     // 🧾 build svg
     const simplifiedD = simplifiedPaths
-      .map((p) => this.buildPath(p.points, p.closed))
-      .join(" ");
+      .map(p => this.buildPath(p.points, p.closed))
+      .join(' ');
 
     return {
       originalPath: d,
@@ -124,9 +124,9 @@ export class SvgPathSimplifier {
   private static simplifySubPath(
     points: Point[],
     epsilon: number,
-  ): { points: Point[]; closed: boolean } {
+  ): {points: Point[]; closed: boolean} {
     if (points.length < 2) {
-      return { points, closed: false };
+      return {points, closed: false};
     }
 
     const closed =
@@ -148,8 +148,8 @@ export class SvgPathSimplifier {
     const cmdRegex = /([MLCQZmlcqz])([^MLCQZmlcqz]*)/g;
     const segments: PathSegment[] = [];
 
-    let current: Point = { x: 0, y: 0 };
-    let start: Point = { x: 0, y: 0 };
+    let current: Point = {x: 0, y: 0};
+    let start: Point = {x: 0, y: 0};
 
     let match: RegExpExecArray | null;
 
@@ -167,42 +167,42 @@ export class SvgPathSimplifier {
       const next = (): Point => {
         const x = nums[i++];
         const y = nums[i++];
-        return isRel ? { x: current.x + x, y: current.y + y } : { x, y };
+        return isRel ? {x: current.x + x, y: current.y + y} : {x, y};
       };
 
       switch (cmd.toUpperCase()) {
-        case "M": {
+        case 'M': {
           const p = next();
           current = start = p;
-          segments.push({ type: "M", p });
+          segments.push({type: 'M', p});
           break;
         }
-        case "L":
+        case 'L':
           while (i < nums.length) {
             const p = next();
-            segments.push({ type: "L", p0: current, p1: p });
+            segments.push({type: 'L', p0: current, p1: p});
             current = p;
           }
           break;
-        case "C":
+        case 'C':
           while (i < nums.length) {
             const c1 = next();
             const c2 = next();
             const p = next();
-            segments.push({ type: "C", p0: current, c1, c2, p1: p });
+            segments.push({type: 'C', p0: current, c1, c2, p1: p});
             current = p;
           }
           break;
-        case "Q":
+        case 'Q':
           while (i < nums.length) {
             const c = next();
             const p = next();
-            segments.push({ type: "Q", p0: current, c, p1: p });
+            segments.push({type: 'Q', p0: current, c, p1: p});
             current = p;
           }
           break;
-        case "Z":
-          segments.push({ type: "Z", p0: current, p1: start });
+        case 'Z':
+          segments.push({type: 'Z', p0: current, p1: start});
           current = start;
           break;
       }
@@ -221,18 +221,18 @@ export class SvgPathSimplifier {
     let current: Point[] = [];
 
     const add = (p: Point): void => {
-      current.push({ ...p });
+      current.push({...p});
     };
 
     for (const s of segments) {
-      if (s.type === "M") {
+      if (s.type === 'M') {
         if (current.length) paths.push(current);
         current = [s.p];
-      } else if (s.type === "L" || s.type === "Z") {
+      } else if (s.type === 'L' || s.type === 'Z') {
         add(s.p1);
-      } else if (s.type === "C") {
+      } else if (s.type === 'C') {
         this.flattenCubic(s.p0, s.c1, s.c2, s.p1, tol, add);
-      } else if (s.type === "Q") {
+      } else if (s.type === 'Q') {
         this.flattenQuadratic(s.p0, s.c, s.p1, tol, add);
       }
     }
@@ -303,13 +303,13 @@ export class SvgPathSimplifier {
   /* ===================== BUILD SVG ===================== */
 
   private static buildPath(points: Point[], closed: boolean): string {
-    if (!points.length) return "";
+    if (!points.length) return '';
 
     let d = `M ${points[0].x} ${points[0].y}`;
     for (let i = 1; i < points.length; i++) {
       d += ` L ${points[i].x} ${points[i].y}`;
     }
-    if (closed) d += " Z";
+    if (closed) d += ' Z';
     return d;
   }
 
@@ -326,7 +326,7 @@ export class SvgPathSimplifier {
 
     const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy);
 
-    const proj = { x: a.x + t * dx, y: a.y + t * dy };
+    const proj = {x: a.x + t * dx, y: a.y + t * dy};
     return this.distance(p, proj);
   }
 

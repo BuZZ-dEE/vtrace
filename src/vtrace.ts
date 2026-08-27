@@ -2,14 +2,14 @@ import {
   SimplifyOptions,
   SimplifyResult,
   SvgPathSimplifier,
-} from "./svg-path-simplifier";
-import { removeInnerSubPaths } from "./svg-sub-path-remover";
-import * as utils from "./utils";
-import { to_svg as traceToSvg } from "./vtracer-embedded";
+} from './svg-path-simplifier';
+import {removeInnerSubPaths} from './svg-sub-path-remover';
+import * as utils from './utils';
+import {to_svg as traceToSvg} from './vtracer-embedded';
 
-type VTracerMode = "pixel" | "polygon" | "spline";
-type VTracerColorMode = "binary" | "color";
-type VTracerHierarchical = "stacked" | "cutout";
+type VTracerMode = 'pixel' | 'polygon' | 'spline';
+type VTracerColorMode = 'binary' | 'color';
+type VTracerHierarchical = 'stacked' | 'cutout';
 
 export interface VTraceOptions {
   /** Suppress speckles up to this size. Defaults to `2`. */
@@ -84,15 +84,15 @@ interface _VTraceOptions {
 
 type VTraceParameterValue = _VTraceOptions[keyof _VTraceOptions] | undefined;
 
-const VTRACER_MODE_VALUES: Array<VTracerMode> = ["pixel", "polygon", "spline"];
+const VTRACER_MODE_VALUES: Array<VTracerMode> = ['pixel', 'polygon', 'spline'];
 const VTRACER_HIERARCHICAL_VALUES: Array<VTracerHierarchical> = [
-  "stacked",
-  "cutout",
+  'stacked',
+  'cutout',
 ];
 
 function formatNumber(value: number, precision = 8): string {
   if (!Number.isFinite(value)) {
-    return "0";
+    return '0';
   }
 
   return Number.parseFloat(value.toFixed(precision)).toString();
@@ -102,8 +102,8 @@ function getAttribute(tag: string, attribute: string): string | undefined {
   return tag.match(utils.getAttrRegexp(attribute))?.[1];
 }
 
-function getTranslate(tag: string): { x: number; y: number } {
-  const transform = getAttribute(tag, "transform");
+function getTranslate(tag: string): {x: number; y: number} {
+  const transform = getAttribute(tag, 'transform');
   const match = transform?.match(
     /translate\(\s*([-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?)\s*(?:,|\s)\s*([-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?)?\s*\)/i,
   );
@@ -133,16 +133,16 @@ function isCommand(token: string): boolean {
 
 function transformPathData(
   d: string,
-  scale: { x: number; y: number },
-  trans: { x: number; y: number },
-  pathTranslate: { x: number; y: number },
+  scale: {x: number; y: number},
+  trans: {x: number; y: number},
+  pathTranslate: {x: number; y: number},
   precision: number,
 ): string {
   const tokens =
     d.match(/[a-zA-Z]|[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?/g) ?? [];
   const output: Array<string> = [];
   let i = 0;
-  let command = "";
+  let command = '';
 
   function transformParams(
     sourceCommand: string,
@@ -152,15 +152,15 @@ function transformPathData(
     const relative = sourceCommand !== upperCommand;
     const transformed = [...values];
 
-    if (upperCommand === "H") {
+    if (upperCommand === 'H') {
       transformed[0] = relative
         ? values[0] * scale.x
         : (values[0] + pathTranslate.x) * scale.x + trans.x;
-    } else if (upperCommand === "V") {
+    } else if (upperCommand === 'V') {
       transformed[0] = relative
         ? values[0] * scale.y
         : (values[0] + pathTranslate.y) * scale.y + trans.y;
-    } else if (upperCommand === "A") {
+    } else if (upperCommand === 'A') {
       transformed[0] = values[0] * scale.x;
       transformed[1] = values[1] * scale.y;
       transformed[5] = relative
@@ -180,7 +180,7 @@ function transformPathData(
       }
     }
 
-    return transformed.map((value) => formatNumber(value, precision));
+    return transformed.map(value => formatNumber(value, precision));
   }
 
   while (i < tokens.length) {
@@ -202,17 +202,17 @@ function transformPathData(
     while (i < tokens.length && !isCommand(tokens[i])) {
       const values = tokens
         .slice(i, i + paramCount)
-        .map((token) => Number(token));
+        .map(token => Number(token));
       if (
         values.length < paramCount ||
-        values.some((value) => Number.isNaN(value))
+        values.some(value => Number.isNaN(value))
       ) {
         break;
       }
 
-      if (!firstSetForCommand || upperCommand === "M") {
+      if (!firstSetForCommand || upperCommand === 'M') {
         const repeatedCommand =
-          upperCommand === "M" && !firstSetForCommand ? "L" : upperCommand;
+          upperCommand === 'M' && !firstSetForCommand ? 'L' : upperCommand;
         if (output[output.length - 1] !== repeatedCommand) {
           output.push(repeatedCommand);
         }
@@ -224,7 +224,7 @@ function transformPathData(
     }
   }
 
-  return output.join(" ");
+  return output.join(' ');
 }
 
 /**
@@ -240,21 +240,21 @@ export class VTrace {
   private _params: _VTraceOptions;
 
   constructor(target: ImageData, options?: VTraceOptions) {
-    this._pathData = "";
+    this._pathData = '';
     this._processed = false;
 
     this._params = {
       turdSize: 2,
       optCurve: true,
       threshold: VTrace.THRESHOLD_AUTO,
-      colorMode: "binary",
+      colorMode: 'binary',
       blackOnWhite: true,
       color: VTrace.COLOR_AUTO,
       background: VTrace.COLOR_TRANSPARENT,
       width: 0,
       height: 0,
-      mode: "spline",
-      hierarchical: "stacked",
+      mode: 'spline',
+      hierarchical: 'stacked',
       cornerThreshold: 60,
       lengthThreshold: 4,
       maxIterations: 10,
@@ -271,8 +271,8 @@ export class VTrace {
     this._imageData = target;
   }
 
-  static COLOR_AUTO = "auto";
-  static COLOR_TRANSPARENT = "transparent";
+  static COLOR_AUTO = 'auto';
+  static COLOR_TRANSPARENT = 'transparent';
   static THRESHOLD_AUTO = -1;
 
   private _getLuminanceData(): Uint8Array {
@@ -374,16 +374,16 @@ export class VTrace {
     } as ImageData;
   }
 
-  private _getVTracerMode(): "pixel" | "polygon" | "spline" {
+  private _getVTracerMode(): 'pixel' | 'polygon' | 'spline' {
     if (!this._params.optCurve) {
-      return "polygon";
+      return 'polygon';
     }
 
     return this._params.mode;
   }
 
   private _trace(): void {
-    const binary = this._params.colorMode === "binary";
+    const binary = this._params.colorMode === 'binary';
     const imageData = binary ? this._createBinaryImageData() : this._imageData;
 
     this._pathData = traceToSvg(
@@ -418,16 +418,16 @@ export class VTrace {
   }
 
   private _extractSVGPath(
-    scale: { x: number; y: number },
-    trans: { x: number; y: number },
+    scale: {x: number; y: number},
+    trans: {x: number; y: number},
   ): string {
     this._ensureProcessed();
 
     return (this._pathData.match(/<path\b[^>]*>/gi) ?? [])
-      .map((tag) => {
-        const d = getAttribute(tag, "d");
+      .map(tag => {
+        const d = getAttribute(tag, 'd');
         if (!d) {
-          return "";
+          return '';
         }
 
         return transformPathData(
@@ -439,7 +439,7 @@ export class VTrace {
         );
       })
       .filter(Boolean)
-      .join(" ");
+      .join(' ');
   }
 
   /**
@@ -455,11 +455,11 @@ export class VTrace {
       params.threshold !== VTrace.THRESHOLD_AUTO
     ) {
       if (
-        typeof params.threshold !== "number" ||
+        typeof params.threshold !== 'number' ||
         !utils.between(params.threshold, 0, 255)
       ) {
         throw new Error(
-          "Bad threshold value. Expected to be an integer in range 0..255",
+          'Bad threshold value. Expected to be an integer in range 0..255',
         );
       }
     }
@@ -467,7 +467,7 @@ export class VTrace {
     if (
       params &&
       params.optCurve != null &&
-      typeof params.optCurve !== "boolean"
+      typeof params.optCurve !== 'boolean'
     ) {
       throw new Error("'optCurve' must be Boolean");
     }
@@ -517,7 +517,7 @@ export class VTrace {
 
         if (
           tmpOldVal !== thisParams[key] &&
-          ["color", "background", "width", "height"].indexOf(key) === -1
+          ['color', 'background', 'width', 'height'].indexOf(key) === -1
         ) {
           this._processed = false;
         }
@@ -539,13 +539,13 @@ export class VTrace {
    */
   getPathTag(
     fillColor?: string,
-    scale: { x: number; y: number } = { x: 1, y: 1 },
-    trans: { x: number; y: number } = { x: 0, y: 0 },
+    scale: {x: number; y: number} = {x: 1, y: 1},
+    trans: {x: number; y: number} = {x: 0, y: 0},
   ): string {
     fillColor = arguments.length === 0 ? this._params.color : fillColor;
 
     if (fillColor === VTrace.COLOR_AUTO) {
-      fillColor = this._params.blackOnWhite ? "black" : "white";
+      fillColor = this._params.blackOnWhite ? 'black' : 'white';
     }
 
     return (
@@ -567,17 +567,17 @@ export class VTrace {
    */
   getSymbol(id: string): string {
     return (
-      "<symbol " +
+      '<symbol ' +
       'viewBox="0 0 ' +
       this._imageData.width +
-      " " +
+      ' ' +
       this._imageData.height +
       '" ' +
       'id="' +
       id +
       '">' +
-      this.getPathTag("") +
-      "</symbol>"
+      this.getPathTag('') +
+      '</symbol>'
     );
   }
 
@@ -587,7 +587,7 @@ export class VTrace {
    * @param {{x: number, y: number}} [scale] - Optional scale applied to path coordinates.
    * @returns {string} SVG document markup.
    */
-  getSVG(scale?: { x: number; y: number }): string {
+  getSVG(scale?: {x: number; y: number}): string {
     const width = this._params.width || this._imageData.width;
     const height = this._params.height || this._imageData.height;
     const scale_ = scale ?? {
@@ -605,7 +605,7 @@ export class VTrace {
       '" ' +
       'viewBox="0 0 ' +
       width +
-      " " +
+      ' ' +
       height +
       '" ' +
       'version="1.1">\n' +
@@ -613,11 +613,11 @@ export class VTrace {
         ? '\t<rect x="0" y="0" width="100%" height="100%" fill="' +
           this._params.background +
           '" />\n'
-        : "") +
-      "\t" +
+        : '') +
+      '\t' +
       this.getPathTag(this._params.color, scale_) +
-      "\n" +
-      "</svg>"
+      '\n' +
+      '</svg>'
     );
   }
 
@@ -629,8 +629,8 @@ export class VTrace {
    * @returns {string} SVG path data.
    */
   getSVGPath(
-    scale?: { x: number; y: number },
-    trans: { x: number; y: number } = { x: 0, y: 0 },
+    scale?: {x: number; y: number},
+    trans: {x: number; y: number} = {x: 0, y: 0},
   ): string {
     const scale_ = scale ?? {
       x: this._params.width ? this._params.width / this._imageData.width : 1,
@@ -649,8 +649,8 @@ export class VTrace {
    * @returns {SimplifyResult} Simplified path data and statistics.
    */
   getSimplifiedSVGPath(
-    scale?: { x: number; y: number },
-    trans: { x: number; y: number } = { x: 0, y: 0 },
+    scale?: {x: number; y: number},
+    trans: {x: number; y: number} = {x: 0, y: 0},
     options: SvgPathSimplifyOptions = {},
   ): SimplifyResult {
     const pathData = this.getSVGPath(scale, trans);
