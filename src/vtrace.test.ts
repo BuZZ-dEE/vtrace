@@ -140,6 +140,12 @@ describe('VTrace', () => {
     expect(() => new VTrace(image, {hierarchical: 'layers' as never})).toThrow(
       'Bad hierarchical value',
     );
+    expect(() => new VTrace(image, {clustering: 'edges' as never})).toThrow(
+      'Bad clustering value',
+    );
+    expect(() => new VTrace(image, {preset: 'icon' as never})).toThrow(
+      'Bad preset value',
+    );
   });
 
   it('supports VTracer curve fitting modes', () => {
@@ -180,5 +186,39 @@ describe('VTrace', () => {
     });
 
     expect(vtrace.getSVGPath().length).toBeGreaterThan(0);
+  });
+
+  it('supports VTracer 1.0 binary clustering options', () => {
+    const vtrace = new VTrace(createImageData(3, 3, [0, 0, 0, 255]), {
+      clustering: 'bw',
+      binaryThreshold: 128,
+      filterSpeckle: 0,
+    });
+
+    expect(vtrace.getSVGPath().length).toBeGreaterThan(0);
+  });
+
+  it('supports VTracer 1.0 watershed clustering options', () => {
+    const vtrace = new VTrace(createImageData(3, 3, [0, 0, 0, 255]), {
+      clustering: 'watershed',
+      watershedDetail: 192,
+      hierarchical: 'cutout',
+      filterSpeckle: 0,
+    });
+
+    expect(vtrace.getSVG().length).toBeGreaterThan(0);
+  });
+
+  it('supports VTracer 1.0 preset, simplification, color, and optimization options', () => {
+    const vtrace = new VTrace(createImageData(3, 3, [0, 0, 0, 255]), {
+      preset: 'poster',
+      simplify: 1,
+      palette: ['#000000', '#ffffff'],
+      maxColors: 4,
+      optimize: 2,
+      filterSpeckle: 0,
+    });
+
+    expect(vtrace.getSVG().length).toBeGreaterThan(0);
   });
 });

@@ -9,7 +9,9 @@ import {to_svg as traceToSvg} from './vtracer-embedded';
 
 type VTracerMode = 'pixel' | 'polygon' | 'spline';
 type VTracerColorMode = 'binary' | 'color';
+type VTracerClustering = 'color-cluster' | 'bw' | 'watershed';
 type VTracerHierarchical = 'stacked' | 'cutout';
+type VTracerPreset = 'bw' | 'poster' | 'photo';
 
 export interface VTraceOptions {
   /** Suppress speckles up to this size. Defaults to `2`. */
@@ -22,6 +24,10 @@ export interface VTraceOptions {
   threshold?: number;
   /** VTracer color mode. Defaults to `binary`, which thresholds the image before tracing. Use `color` to trace color layers directly. */
   colorMode?: VTracerColorMode;
+  /** VTracer 1.0 region-forming algorithm. Overrides `colorMode` when set. */
+  clustering?: VTracerClustering;
+  /** VTracer 1.0 preset applied before explicit tracing options. */
+  preset?: VTracerPreset;
   /** Whether darker pixels are traced as foreground. Defaults to `true`. */
   blackOnWhite?: boolean;
   /** Foreground color. Defaults to `VTrace.COLOR_AUTO`; ignored when exporting as `<symbol>`. */
@@ -50,8 +56,26 @@ export interface VTraceOptions {
   colorPrecision?: number;
   /** VTracer RGB layer difference threshold. Defaults to `16`; mainly relevant with `colorMode: 'color'`. */
   layerDifference?: number;
+  /** VTracer 1.0 curve simplification tolerance in pixels. Disabled by default. */
+  simplify?: number;
   /** VTracer decimal places for generated path data. Defaults to `8`. */
   pathPrecision?: number;
+  /** Fixed output palette as `#rrggbb` colors. */
+  palette?: Array<string>;
+  /** Auto-quantize output to at most this many colors. */
+  maxColors?: number;
+  /** VTracer 1.0 SVG optimization level: `0` off, `1` cleanup, `2` cleanup plus shorthands. */
+  optimize?: 0 | 1 | 2;
+  /** Fixed threshold passed to VTracer's binary frontend when using `clustering: 'bw'`. */
+  binaryThreshold?: number;
+  /** Use VTracer's Bradley-Roth adaptive thresholding when using `clustering: 'bw'`. */
+  adaptive?: boolean;
+  /** Adaptive threshold window size in pixels; `0` lets VTracer choose. */
+  adaptiveWindow?: number;
+  /** Adaptive threshold sensitivity, as percent below local mean. */
+  adaptiveT?: number;
+  /** Watershed hierarchy cut level. Higher keeps more regions; defaults to VTracer's `128`. */
+  watershedDetail?: number;
 }
 
 export interface SvgPathSimplifyOptions extends SimplifyOptions {
@@ -65,6 +89,8 @@ interface _VTraceOptions {
   optCurve: boolean;
   threshold: number;
   colorMode: VTracerColorMode;
+  clustering?: VTracerClustering;
+  preset?: VTracerPreset;
   blackOnWhite: boolean;
   color: string;
   background: string;
@@ -79,16 +105,31 @@ interface _VTraceOptions {
   spliceThreshold: number;
   colorPrecision: number;
   layerDifference: number;
+  simplify?: number;
   pathPrecision: number;
+  palette?: Array<string>;
+  maxColors?: number;
+  optimize?: 0 | 1 | 2;
+  binaryThreshold?: number;
+  adaptive?: boolean;
+  adaptiveWindow?: number;
+  adaptiveT?: number;
+  watershedDetail?: number;
 }
 
 type VTraceParameterValue = _VTraceOptions[keyof _VTraceOptions] | undefined;
 
 const VTRACER_MODE_VALUES: Array<VTracerMode> = ['pixel', 'polygon', 'spline'];
+const VTRACER_CLUSTERING_VALUES: Array<VTracerClustering> = [
+  'color-cluster',
+  'bw',
+  'watershed',
+];
 const VTRACER_HIERARCHICAL_VALUES: Array<VTracerHierarchical> = [
   'stacked',
   'cutout',
 ];
+const VTRACER_PRESET_VALUES: Array<VTracerPreset> = ['bw', 'poster', 'photo'];
 
 function formatNumber(value: number, precision = 8): string {
   if (!Number.isFinite(value)) {
@@ -245,9 +286,12 @@ export class VTrace {
 
     this._params = {
       turdSize: 2,
+      filterSpeckle: undefined,
       optCurve: true,
       threshold: VTrace.THRESHOLD_AUTO,
       colorMode: 'binary',
+      clustering: undefined,
+      preset: undefined,
       blackOnWhite: true,
       color: VTrace.COLOR_AUTO,
       background: VTrace.COLOR_TRANSPARENT,
@@ -261,7 +305,16 @@ export class VTrace {
       spliceThreshold: 45,
       colorPrecision: 6,
       layerDifference: 16,
+      simplify: undefined,
       pathPrecision: 8,
+      palette: undefined,
+      maxColors: undefined,
+      optimize: undefined,
+      binaryThreshold: undefined,
+      adaptive: undefined,
+      adaptiveWindow: undefined,
+      adaptiveT: undefined,
+      watershedDetail: undefined,
     };
 
     if (options) {
@@ -383,8 +436,14 @@ export class VTrace {
   }
 
   private _trace(): void {
-    const binary = this._params.colorMode === 'binary';
+    const binary =
+      this._params.clustering == null && this._params.colorMode === 'binary';
     const imageData = binary ? this._createBinaryImageData() : this._imageData;
+    const binaryThreshold =
+      this._params.binaryThreshold ??
+      (this._params.threshold === VTrace.THRESHOLD_AUTO
+        ? undefined
+        : this._params.threshold);
 
     this._pathData = traceToSvg(
       new Uint8Array(imageData.data),
@@ -392,6 +451,8 @@ export class VTrace {
       imageData.height,
       {
         binary,
+        clustering: this._params.clustering,
+        preset: this._params.preset,
         mode: this._getVTracerMode(),
         hierarchical: this._params.hierarchical,
         cornerThreshold: this._params.cornerThreshold,
@@ -405,7 +466,16 @@ export class VTrace {
         ),
         colorPrecision: this._params.colorPrecision,
         layerDifference: this._params.layerDifference,
+        simplify: this._params.simplify,
         pathPrecision: this._params.pathPrecision,
+        palette: this._params.palette,
+        maxColors: this._params.maxColors,
+        optimize: this._params.optimize,
+        binaryThreshold,
+        adaptive: this._params.adaptive,
+        adaptiveWindow: this._params.adaptiveWindow,
+        adaptiveT: this._params.adaptiveT,
+        watershedDetail: this._params.watershedDetail,
       },
     );
     this._processed = true;
@@ -478,6 +548,24 @@ export class VTrace {
     ) {
       throw new Error(
         "Bad mode value. Allowed values are: 'pixel', 'polygon', 'spline'",
+      );
+    }
+
+    if (
+      params?.clustering != null &&
+      VTRACER_CLUSTERING_VALUES.indexOf(params.clustering) === -1
+    ) {
+      throw new Error(
+        "Bad clustering value. Allowed values are: 'color-cluster', 'bw', 'watershed'",
+      );
+    }
+
+    if (
+      params?.preset != null &&
+      VTRACER_PRESET_VALUES.indexOf(params.preset) === -1
+    ) {
+      throw new Error(
+        "Bad preset value. Allowed values are: 'bw', 'poster', 'photo'",
       );
     }
 

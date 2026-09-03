@@ -20,7 +20,7 @@ This package is a VTracer-backed alternative to [`potrace-ts`](https://github.co
 - Uses VTracer for bitmap-to-vector tracing.
 - Ships as a self-contained JavaScript package with embedded WASM.
 - Works in browser applications without additional WASM asset or MIME-type configuration.
-- Supports output scaling, translation, foreground/background colors, thresholding, and speckle filtering.
+- Supports output scaling, translation, foreground/background colors, thresholding, speckle filtering, VTracer 1.0 clustering modes, curve simplification, palettes, and SVG optimization.
 - Includes optional SVG path simplification utilities.
 - Can remove sub-paths that are fully contained inside another sub-path.
 
@@ -29,7 +29,7 @@ This package is a VTracer-backed alternative to [`potrace-ts`](https://github.co
 The package is designed for canvas-style workflows where source pixels are available as `ImageData`:
 
 ```typescript
-const imageData = canvas.getContext("2d")!.getImageData(0, 0, width, height);
+const imageData = canvas.getContext('2d')!.getImageData(0, 0, width, height);
 ```
 
 The embedded WASM approach increases the JavaScript bundle size compared with loading a separate `.wasm` file, but it avoids runtime failures caused by missing assets, wrong asset URLs, or servers that do not return `application/wasm` for WASM files.
@@ -49,37 +49,61 @@ pnpm add @buzz-dee/vtrace
 ## Usage
 
 ```typescript
-import {
-  VTrace,
-  SvgPathSimplifier,
-  type VTraceOptions,
-} from "@buzz-dee/vtrace";
+import {VTrace, SvgPathSimplifier, type VTraceOptions} from '@buzz-dee/vtrace';
 
-const imageData = canvas.getContext("2d")!.getImageData(0, 0, width, height);
+const imageData = canvas.getContext('2d')!.getImageData(0, 0, width, height);
 
 const options: VTraceOptions = {
   threshold: VTrace.THRESHOLD_AUTO,
   turdSize: 2,
   optCurve: true,
-  colorMode: "binary",
-  mode: "spline",
-  hierarchical: "cutout",
+  colorMode: 'binary',
+  mode: 'spline',
+  hierarchical: 'cutout',
 };
 
 const vtrace = new VTrace(imageData, options);
 
 const svg = vtrace.getSVG();
-const pathData = vtrace.getSVGPath({ x: 1, y: 1 }, { x: 0, y: 0 });
+const pathData = vtrace.getSVGPath({x: 1, y: 1}, {x: 0, y: 0});
 const defaultPathData = vtrace.getSVGPath();
 const simplified = vtrace.getSimplifiedSVGPath(undefined, undefined, {
   flattenTolerance: 0.5,
   simplifyTolerance: 0.1,
   removeInnerSubPaths: true,
 });
-const simplifiedPath = SvgPathSimplifier.simplifyPath("M 0 0 L 10 0 L 20 0");
+const simplifiedPath = SvgPathSimplifier.simplifyPath('M 0 0 L 10 0 L 20 0');
 const cleanedPath = SvgPathSimplifier.removeInnerSubPaths(
-  "M 0 0 L 10 0 L 10 10 L 0 10 Z M 2 2 L 4 2 L 4 4 L 2 4 Z",
+  'M 0 0 L 10 0 L 10 10 L 0 10 Z M 2 2 L 4 2 L 4 4 L 2 4 Z',
 );
+```
+
+VTracer 1.0 options are also available:
+
+```typescript
+const poster = new VTrace(imageData, {
+  preset: 'poster',
+  clustering: 'color-cluster',
+  hierarchical: 'cutout',
+  simplify: 1.5,
+  maxColors: 8,
+  optimize: 2,
+});
+
+const adaptiveLineArt = new VTrace(imageData, {
+  clustering: 'bw',
+  adaptive: true,
+});
+
+const watershed = new VTrace(imageData, {
+  clustering: 'watershed',
+  watershedDetail: 192,
+  hierarchical: 'cutout',
+});
+
+const paletteTrace = new VTrace(imageData, {
+  palette: ['#1b1b1b', '#e0c088', '#5a7d3c', '#8fb0d0'],
+});
 ```
 
 ## API
@@ -107,16 +131,16 @@ Creates a tracer instance from `ImageData`.
 Scale and translation values use this shape:
 
 ```typescript
-type TransformPoint = { x: number; y: number };
+type TransformPoint = {x: number; y: number};
 ```
 
 Examples:
 
 ```typescript
 const path = vtrace.getSVGPath();
-const scaledPath = vtrace.getSVGPath({ x: 2, y: 2 });
-const movedPath = vtrace.getSVGPath(undefined, { x: 10, y: 20 });
-const scaledAndMovedPath = vtrace.getSVGPath({ x: 2, y: 2 }, { x: 10, y: 20 });
+const scaledPath = vtrace.getSVGPath({x: 2, y: 2});
+const movedPath = vtrace.getSVGPath(undefined, {x: 10, y: 20});
+const scaledAndMovedPath = vtrace.getSVGPath({x: 2, y: 2}, {x: 10, y: 20});
 ```
 
 Simplification options use this shape:
@@ -163,7 +187,11 @@ interface VTraceOptions {
   /** Threshold below which luminance is considered black, from `0` to `255`, or `VTrace.THRESHOLD_AUTO`. */
   threshold?: number;
   /** VTracer color mode. Defaults to `binary`, which thresholds the image before tracing. */
-  colorMode?: "binary" | "color";
+  colorMode?: 'binary' | 'color';
+  /** VTracer 1.0 region-forming algorithm. Overrides `colorMode` when set. */
+  clustering?: 'color-cluster' | 'bw' | 'watershed';
+  /** VTracer 1.0 preset applied before explicit tracing options. */
+  preset?: 'bw' | 'poster' | 'photo';
   /** Whether darker pixels are traced as foreground. Defaults to `true`. */
   blackOnWhite?: boolean;
   /** Foreground color. Defaults to `VTrace.COLOR_AUTO`; ignored when exporting as `<symbol>`. */
@@ -175,9 +203,9 @@ interface VTraceOptions {
   /** Output SVG height. Defaults to the source image height. */
   height?: number;
   /** VTracer curve fitting mode. Defaults to `spline`; `pixel` maps to VTracer's unsimplified mode. */
-  mode?: "pixel" | "polygon" | "spline";
+  mode?: 'pixel' | 'polygon' | 'spline';
   /** VTracer hierarchical mode. Defaults to `stacked`; use `cutout` to subtract upper layers from lower layers. */
-  hierarchical?: "stacked" | "cutout";
+  hierarchical?: 'stacked' | 'cutout';
   /** VTracer minimum momentary angle, in degrees, to be considered a corner. Defaults to `60`. */
   cornerThreshold?: number;
   /** VTracer segment length threshold. Defaults to `4`. */
@@ -192,8 +220,26 @@ interface VTraceOptions {
   colorPrecision?: number;
   /** VTracer RGB layer difference threshold. Defaults to `16`; mainly relevant with `colorMode: 'color'`. */
   layerDifference?: number;
+  /** VTracer 1.0 curve simplification tolerance in pixels. Disabled by default. */
+  simplify?: number;
   /** VTracer decimal places for generated path data. Defaults to `8`. */
   pathPrecision?: number;
+  /** Fixed output palette as `#rrggbb` colors. */
+  palette?: string[];
+  /** Auto-quantize output to at most this many colors. */
+  maxColors?: number;
+  /** VTracer 1.0 SVG optimization level: `0` off, `1` cleanup, `2` cleanup plus shorthands. */
+  optimize?: 0 | 1 | 2;
+  /** Fixed threshold passed to VTracer's binary frontend when using `clustering: 'bw'`. */
+  binaryThreshold?: number;
+  /** Use VTracer's Bradley-Roth adaptive thresholding when using `clustering: 'bw'`. */
+  adaptive?: boolean;
+  /** Adaptive threshold window size in pixels; `0` lets VTracer choose. */
+  adaptiveWindow?: number;
+  /** Adaptive threshold sensitivity, as percent below local mean. */
+  adaptiveT?: number;
+  /** Watershed hierarchy cut level. Higher keeps more regions; defaults to VTracer's `128`. */
+  watershedDetail?: number;
 }
 ```
 
@@ -204,6 +250,8 @@ Defaults:
 - `optCurve`: `true`
 - `threshold`: `VTrace.THRESHOLD_AUTO`
 - `colorMode`: `'binary'`
+- `clustering`: unset; legacy `colorMode` decides between binary preprocessing and VTracer color clustering
+- `preset`: unset
 - `blackOnWhite`: `true`
 - `color`: `VTrace.COLOR_AUTO`
 - `background`: `VTrace.COLOR_TRANSPARENT`
@@ -217,14 +265,26 @@ Defaults:
 - `spliceThreshold`: `45`
 - `colorPrecision`: `6`
 - `layerDifference`: `16`
+- `simplify`: unset
 - `pathPrecision`: `8`
+- `palette`: unset
+- `maxColors`: unset
+- `optimize`: VTracer default
+- `binaryThreshold`: uses `threshold` when it is not `VTrace.THRESHOLD_AUTO`, otherwise VTracer default
+- `adaptive`: unset
+- `adaptiveWindow`: unset
+- `adaptiveT`: unset
+- `watershedDetail`: VTracer default
 
 Compatibility notes:
 
 - `optCurve: false` maps tracing to polygon mode instead of spline mode.
 - `filterSpeckle` is an alias for `turdSize`; when both are set, `filterSpeckle` is passed to VTracer.
-- `threshold` and `blackOnWhite` only affect tracing when `colorMode` is `'binary'`.
-- `colorMode: 'color'` traces the source `ImageData` as RGBA bytes. VTracer clusters colors in RGB channel space; it does not use a perceptual color space such as Lab.
+- `threshold` and `blackOnWhite` only affect legacy binary preprocessing when `clustering` is unset and `colorMode` is `'binary'`.
+- `clustering` maps to VTracer 1.0 region forming: `'color-cluster'`, `'bw'`, or `'watershed'`. When `clustering` is set, it overrides `colorMode` and passes the original source pixels directly to VTracer.
+- `colorMode: 'color'` maps to VTracer 1.0 `clustering: 'color-cluster'` internally. VTracer 1.0 uses a richer color fitting and optimization pipeline than VTracer 0.6.
+- Use `clustering: 'bw'` with `binaryThreshold`, or with `adaptive`, `adaptiveWindow`, and `adaptiveT`, to use VTracer 1.0 binary thresholding instead of vtrace's legacy preprocessing.
+- Use `clustering: 'watershed'` with `watershedDetail` for VTracer 1.0's edge-aware watershed segmentation. `watershedDetail` is uncapped by VTracer 1.0 alpha.4.
 
 ## WASM Bundle Strategy
 
@@ -268,6 +328,8 @@ Requirements:
 - Rust with the `wasm32-unknown-unknown` target installed. On rustup-based installs, run `rustup target add wasm32-unknown-unknown`. On Arch Linux, install `rust-wasm`.
 - `wasm-bindgen` CLI version matching the Rust crate version in `rust/vtracer-wasm/Cargo.toml`; currently `0.2.126`. Install with `cargo install wasm-bindgen-cli --version 0.2.126 --locked` or your distribution package.
 - The script invokes `wasm-bindgen` directly and does not use `wasm-pack`.
+
+The embedded wrapper currently targets `vtracer` `1.0.0-alpha.4` and `visioncortex` `0.9.3`.
 
 ## CI and Publishing
 
